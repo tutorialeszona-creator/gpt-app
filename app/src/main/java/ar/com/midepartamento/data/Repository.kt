@@ -47,6 +47,26 @@ class Repository(private val context: Context) {
             dao.event(PaymentEvent(newId(), value.id, Instant.now().toString(), if (value.paidDate == null) "Pago anulado" else "Pago registrado / corregido", value.amount, value.paidDate))
         }
     }
+    suspend fun saveExpense(value: Expense) = db.withTransaction {
+        val date = java.time.LocalDate.parse(value.date)
+        require(date.year in 2000..2100 && !date.isAfter(java.time.LocalDate.now())) { "Revisá la fecha: no puede ser futura" }
+        require(value.cents in 1..ar.com.midepartamento.domain.MAX_MONEY) { "El total debe ser positivo" }
+        require(value.merchant.length <= 120 && value.description.length <= 2000) { "Comercio o descripción demasiado largos" }
+        require(value.items.size <= 100 && value.items.all { it.name.isNotBlank() && it.name.length <= 120 && (it.cents == null || it.cents in 1..ar.com.midepartamento.domain.MAX_MONEY) }) { "Revisá el detalle de productos" }
+        if (value.receipt != null) {
+            require(File(context.filesDir, "receipts/${value.receipt}").isFile) { "No se encontró la foto del ticket" }
+            require(dao.allExpenses().none { it.receipt == value.receipt && it.id != value.id }) { "Este ticket ya está guardado. Editá la compra existente en Movimientos." }
+        }
+        ensureMonth(java.time.YearMonth.from(date).toString())
+        dao.expense(value)
+    }
+    suspend fun deleteExpense(value: Expense) {
+        dao.deleteExpense(value.id)
+        value.receipt?.let { discardReceipt(it) }
+    }
+    suspend fun discardReceipt(name: String) = withContext(Dispatchers.IO) {
+        if (dao.allExpenses().none { it.receipt == name }) File(context.filesDir, "receipts/$name").delete()
+    }
     suspend fun deleteBill(value: Bill) = db.withTransaction { dao.deleteEvents(value.id); dao.deleteBill(value.id) }
     suspend fun attach(bill: Bill, uri: Uri) = withContext(Dispatchers.IO) {
         val mime = context.contentResolver.getType(uri) ?: error("No se reconoce el tipo de archivo")
@@ -72,18 +92,18 @@ class Repository(private val context: Context) {
     }
     suspend fun export(uri: Uri) = withContext(Dispatchers.IO) {
         val backup = db.withTransaction {
-            val result = JSONObject().put("format", "mi-departamento").put("version", 1).put("exportedAt", Instant.now().toString())
+            val result = JSONObject().put("format", "mi-departamento").put("version", 2).put("exportedAt", Instant.now().toString())
             val settings = dao.getSettings() ?: Settings()
             result.put("settings", JSONObject().put("rateCents", settings.rateCents).put("salaryCents", settings.salaryCents))
             fun array(items: List<JSONObject>) = JSONArray().apply { items.forEach { put(it) } }
             result.put("months", JSONArray(dao.allMonths().map { it.month }))
             result.put("recurring", array(dao.allRecurring().map { JSONObject().put("id", it.id).put("name", it.name).put("cents", it.cents).put("estimated", it.estimated).put("frequency", it.frequency).put("startMonth", it.startMonth).put("active", it.active) }))
             result.put("incomes", array(dao.allIncomes().map { JSONObject().put("id", it.id).put("month", it.month).put("name", it.name).put("cents", it.cents).put("currency", it.currency) }))
-            result.put("expenses", array(dao.allExpenses().map { JSONObject().put("id", it.id).put("date", it.date).put("category", it.category).put("description", it.description).put("cents", it.cents) }))
+            result.put("expenses", array(dao.allExpenses().map { JSONObject().put("id", it.id).put("date", it.date).put("category", it.category).put("description", it.description).put("cents", it.cents).put("merchant", it.merchant).put("items", JSONArray(PurchaseConverters().encode(it.items))).put("receipt", it.receipt ?: JSONObject.NULL) }))
             result.put("bills", array(dao.allBills().map { JSONObject().put("id", it.id).put("recurringId", it.recurringId ?: JSONObject.NULL).put("month", it.month).put("name", it.name).put("planned", it.planned).put("actual", it.actual ?: JSONObject.NULL).put("estimated", it.estimated).put("dueDate", it.dueDate ?: JSONObject.NULL).put("paidDate", it.paidDate ?: JSONObject.NULL).put("notes", it.notes).put("attachment", it.attachment ?: JSONObject.NULL) }))
             result.put("paymentEvents", array(dao.allEvents().map { JSONObject().put("id", it.id).put("billId", it.billId).put("timestamp", it.timestamp).put("action", it.action).put("cents", it.cents).put("paidDate", it.paidDate ?: JSONObject.NULL) }))
             result.put("attachments", JSONObject().apply {
-                dao.allBills().mapNotNull { it.attachment }.distinct().forEach { name ->
+                (dao.allBills().mapNotNull { it.attachment } + dao.allExpenses().mapNotNull { it.receipt }).distinct().forEach { name ->
                     val f = File(context.filesDir, "receipts/$name")
                     require(f.isFile) { "Falta un comprobante: $name. Volvé a adjuntarlo antes de exportar." }
                     put(name, Base64.encodeToString(f.readBytes(), Base64.NO_WRAP))

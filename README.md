@@ -1,6 +1,31 @@
 # Mi Departamento 🏠
 
-Aplicación Android nativa y sin conexión para administrar las cuentas del hogar. Primera versión funcional en español con Kotlin, Jetpack Compose, Material 3 y Room. Android 8.0 (API 26) o posterior.
+Aplicación Android nativa y sin conexión para administrar las cuentas del hogar. Versión 0.2.0 en español con Kotlin, Jetpack Compose, Material 3 y Room. Android 8.0 (API 26) o posterior.
+
+## Descargar e instalar la versión 0.2
+
+**[Descargar Mi Departamento v0.2 — APK](https://github.com/tutorialeszona-creator/gpt-app/raw/refs/heads/main/downloads/Mi-Departamento-v0.2.apk)** (aproximadamente 61 MB).
+
+Instalá esta actualización encima de la versión 0.1: conserva el mismo identificador y certificado de firma y actualiza Room de la versión 1 a la 2 sin borrar registros. No hace falta desinstalar. La migración se verificó con el esquema real anterior, aunque la instalación en un teléfono todavía requiere comprobación manual.
+
+### Compras y comida del mes
+
+En **Movimientos → + Compra / gasto** elegí Supermercado, Verdulería, Carnicería, Comida u otro rubro. Cargá comercio, fecha, total y, si querés, los productos con sus importes. Se puede agregar, corregir y quitar cada producto. Inicio, Movimientos y Estadísticas muestran **Comida del mes**, con el acumulado de cada rubro alimentario y el total del mes seleccionado.
+
+Los productos son el detalle del gasto: se contabiliza **una sola vez el total final de la compra**. Esto permite conservar descuentos y diferencias respecto de la suma de renglones. Si querés calcular el total a partir del detalle, usá el botón explícito **Usar suma de productos como total**.
+
+### Escanear ticket
+
+1. En Inicio o Movimientos tocá **Escanear ticket**.
+2. Elegí **Sacar foto** (abre la cámara del teléfono) o **Elegir de galería**.
+3. Revisá comercio, fecha, rubro, productos y total. Se puede consultar el texto detectado y abrir la foto original.
+4. Corregí lo necesario y tocá **Guardar compra**. Hasta confirmar, no se agrega ningún gasto.
+
+El modelo latino de Google ML Kit está incluido en el APK: no necesita descargar un modelo después de instalarlo. El reconocimiento se realiza en el dispositivo y la aplicación no tiene permiso de internet. Las fotos se copian a su almacenamiento privado y se incluyen en la exportación JSON versión 2. Sólo se admiten imágenes JPG, PNG o WebP de hasta 20 MB; la cámara se abre mediante la app del teléfono.
+
+La lectura es una sugerencia: si no identifica fecha o total, los deja vacíos. Tickets borrosos, fechas con formatos no reconocidos, renglones separados, descuentos y columnas pueden requerir corrección manual. Los importes se interpretan como ARS. Reimportar exactamente el mismo archivo de imagen se detecta al guardar; otra foto del mismo ticket puede no detectarse como duplicada. No hay guardado automático ni carga a servidores.
+
+El APK es más grande que la versión anterior porque incluye los modelos y bibliotecas OCR para las arquitecturas Android compatibles. El reconocimiento con fotos reales y la cámara todavía necesitan pruebas en un teléfono; las pruebas automatizadas cubren el análisis del texto, la revisión, el guardado y la actualización de datos.
 
 ## Abrir en Android Studio y generar el APK
 
@@ -26,7 +51,7 @@ El wrapper fija Gradle 8.11.1. El proyecto fija Android Gradle Plugin 8.9.1, Kot
 - Electricidad, gas y agua están identificados como estimados. Ninguna boleta aparece pagada y **no se asignan vencimientos**.
 - Se crea un ingreso mensual base de **USD 1.000**. Ingresá la cotización en Configuración. Hasta entonces se advierte que los totales en pesos son parciales; no se inventa un tipo de cambio.
 - Desde Inicio se cambia el mes/año y se registran ingresos o gastos. En Boletas se editan importes, vencimientos, notas y pagos. Para pagar se exige confirmar el importe real y una fecha de pago válida, no futura.
-- Se pueden registrar ingresos adicionales en ARS/USD y gastos personales de las ocho categorías solicitadas. Los movimientos se pueden corregir y eliminar.
+- Se pueden registrar ingresos adicionales en ARS/USD y gastos personales de los rubros personales, incluidos supermercado, verdulería y carnicería. Los movimientos se pueden corregir y eliminar.
 - Los PDF, JPG, PNG y WebP (máximo 20 MB por archivo) se copian al almacenamiento privado de la app. Se pueden abrir con una aplicación externa compatible, reemplazar y exportar con la copia de seguridad.
 
 ## Cálculos y recurrencia
@@ -62,10 +87,10 @@ app/schemas/              Esquema versionado de Room
 
 Todos los datos se guardan en Room (`mi-departamento.db`). Cerrar la app o reiniciar el teléfono conserva la información. Desinstalar o borrar los datos de la app los elimina.
 
-Configuración → **Exportar copia de seguridad** permite elegir dónde guardar un JSON versión 1 con todos los meses, plantillas, movimientos, fechas, notas, historial y comprobantes en Base64. Es un archivo sin cifrar: guardalo de forma privada. Los importes se exportan en centavos. La restauración/importación desde la interfaz queda pendiente para la siguiente versión; no desinstales confiando en una restauración automática. Las copias automáticas de Android están desactivadas para no enviar tus finanzas a la nube sin una decisión explícita.
+Configuración → **Exportar copia de seguridad** permite elegir dónde guardar un JSON versión 2 con todos los meses, plantillas, movimientos, fechas, notas, historial y comprobantes en Base64. Es un archivo sin cifrar: guardalo de forma privada. Los importes se exportan en centavos. La restauración/importación desde la interfaz queda pendiente para la siguiente versión; no desinstales confiando en una restauración automática. Las copias automáticas de Android están desactivadas para no enviar tus finanzas a la nube sin una decisión explícita.
 
 ## Alcance de esta versión
 
-Incluye las cinco pantallas, gráfico de distribución, comparación de seis meses registrados y evolución por período de electricidad, gas y agua. No incluye notificaciones, OCR, sincronización, importación, pagos parciales ni conversión histórica. El historial registra pagos, correcciones y anulaciones; no es un libro contable inmutable y se elimina junto con la boleta si la borrás.
+Incluye las cinco pantallas, gráfico de distribución, comparación de seis meses registrados y evolución por período de electricidad, gas y agua. No incluye notificaciones, sincronización, importación, pagos parciales ni conversión histórica. El historial registra pagos, correcciones y anulaciones; no es un libro contable inmutable y se elimina junto con la boleta si la borrás.
 
 Consultá [VALIDATION.md](docs/VALIDATION.md) para las comprobaciones realizadas en este entorno.

@@ -11,10 +11,11 @@ android {
         applicationId = "ar.com.midepartamento"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    sourceSets.getByName("test").resources.srcDir("schemas")
     buildFeatures { compose = true }
     bundle { language { enableSplit = false } }
     testOptions {
@@ -45,6 +46,8 @@ dependencies {
     implementation("androidx.room:room-ktx:2.7.0")
     ksp("androidx.room:room-compiler:2.7.0")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("androidx.exifinterface:exifinterface:1.4.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:core:1.6.1")

@@ -120,7 +120,7 @@ import java.time.YearMonth
     Box { OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text("$label: ${format(value)}") }; DropdownMenu(expanded, { expanded = false }) { options.forEach { option -> DropdownMenuItem(text = { Text(format(option)) }, onClick = { change(option); expanded = false }) } } }
 }
 
-@Composable private fun DateField(value: String, change: (String) -> Unit, label: String) {
+@Composable internal fun DateField(value: String, change: (String) -> Unit, label: String) {
     var open by remember { mutableStateOf(false) }
     OutlinedTextField(value, change, label = { Text(label) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
         trailingIcon = { IconButton(onClick = { open = true }) { Icon(Icons.Outlined.CalendarMonth, "Elegir fecha") } })

@@ -1,4 +1,4 @@
-# Validación de la primera versión
+# Validación de Mi Departamento 0.2.0
 
 ## Entorno
 
@@ -23,11 +23,14 @@ El script prepara o reutiliza las herramientas en `/workspace/toolchains`, conse
 - `AppSmokeTest` con Compose bajo Robolectric: ingreso por formulario, rechazo de importe inválido y creación del ingreso correcto.
 - `MainActivityTest`: arranque real de la actividad, carga de la base y navegación a Boletas y Configuración, con desplazamiento en pantallas pequeñas.
 
-Resultado final en esta instancia: **10 pruebas ejecutadas, 10 correctas, 0 fallidas, 0 errores y 0 omitidas**. `lintDebug` y `assembleDebug` completados correctamente. Lint finalizó sin errores y con una advertencia sobre la configuración de copias en versiones anteriores de Android. Las copias automáticas están deshabilitadas explícitamente con `allowBackup=false`, `fullBackupContent=false` y reglas de exclusión para Android 12 o posterior. Se ejecutó el instalador reutilizable completo `python3 scripts/cloud_setup.py`, incluido el Gradle Wrapper con verificación SHA-256.
+Resultado final en esta instancia: **21 pruebas ejecutadas, 21 correctas, 0 fallidas, 0 errores y 0 omitidas**. `testDebugUnitTest`, `lintDebug` y `assembleDebug` completados correctamente. Lint no informa errores ni advertencias. Se verificó la firma del APK y que coincide con la versión 0.1; el identificador sigue siendo `ar.com.midepartamento`, ahora con `versionCode=2`.
 
-APK de desarrollo: `app/build/outputs/apk/debug/app-debug.apk` (aproximadamente 16 MB).
-SHA-256: `3bce52cc06cbd2e9bd1f9bed12da87b20048d7fe058c6b75bc2c3aa98366f5b1`.
+APK de desarrollo: `downloads/Mi-Departamento-v0.2.apk` (61.224.586 bytes).
+SHA-256: `434678e13be1d53b6c10a0b1d3a53b00106799f46d647eaa0881cf284761e455`.
 
+Se comprobó que el APK incluye los modelos OCR y sus bibliotecas nativas y que no declara el permiso `INTERNET`. Esto verifica que las herramientas y el modelo vienen empaquetados, pero no demuestra la calidad del reconocimiento en un teléfono.
+
+Pruebas nuevas: importes de tickets argentinos, fechas inválidas y ausentes, subtotal/IVA/descuentos/vuelto, totales por rubro sin duplicar productos, revisión y corrección antes de confirmar, base Room actualizada desde el esquema 1 real con gastos preservados, productos persistidos al reabrir la base, rechazo de la misma imagen duplicada, copia mediante FileProvider y respaldo JSON 2 con fotos y detalle.
 La configuración reutilizable de instalación, arranque y ubicación del checkout se guardó en el borrador del entorno. Guardar el borrador no publica el snapshot; la publicación y la validación en una nueva tarea quedan fuera de esta comprobación.
 
 ## Prueba manual en Android Studio o teléfono (pendiente)
@@ -48,4 +51,15 @@ Con una instalación nueva:
 
 ## Pendientes conocidos
 
-Importación/restauración de copias desde la interfaz, notificaciones, OCR, pagos parciales y cotización histórica por movimiento. Exportar una copia funciona como respaldo portable, pero esta versión todavía no incluye su restauración automática.
+Importación/restauración de copias desde la interfaz, notificaciones, pagos parciales y cotización histórica por movimiento. Exportar una copia funciona como respaldo portable, pero esta versión todavía no incluye su restauración automática.
+
+
+## Comprobaciones manuales pendientes para v0.2
+
+- Instalar la actualización encima de v0.1 en un teléfono y verificar datos existentes.
+- Crear compras de supermercado, verdulería y carnicería, agregar productos y comprobar el total del mes. Editar y eliminar compras y revisar el recálculo.
+- Con el teléfono sin conexión, fotografiar tickets impresos reales, importar imágenes de galería y revisar los datos sugeridos. Probar cancelación de cámara/galería y fechas o totales no reconocidos.
+- Revisar un ticket con descuentos: la suma de productos puede ser distinta del total, y sólo el total debe sumarse al gasto.
+- Importar la misma foto dos veces: la segunda confirmación debe rechazarse. Probar abrir la foto guardada después de cerrar la app y eliminar la original de la galería.
+
+No se ejecutó el motor OCR nativo ni la cámara en un teléfono o emulador Android real en este entorno. Las pruebas de lectura parten de texto y las de importación ejercitan archivos y revisión; no se presentan como validación del reconocimiento visual real.

@@ -40,12 +40,18 @@ import java.util.Locale
 
 val Spanish = Locale.forLanguageTag("es-AR")
 val MonthFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Spanish)
-val Categories = listOf("Supermercado", "Transporte", "Comida", "Limpieza", "Mascotas", "Entretenimiento", "Compras", "Otros")
+val Categories = listOf("Supermercado", "Verdulería", "Carnicería", "Transporte", "Comida", "Limpieza", "Mascotas", "Entretenimiento", "Compras", "Otros")
 data class Editor(val kind: String, val value: Any? = null)
 
 @Composable fun DepartmentApp(vm: FinanceViewModel) = DepartmentTheme {
     val state by vm.state.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val scanBusy by vm.scanBusy.collectAsStateWithLifecycle()
+    val scanDraft by vm.scanDraft.collectAsStateWithLifecycle()
+    val savingPurchase by vm.savingPurchase.collectAsStateWithLifecycle()
+    val purchaseError by vm.purchaseError.collectAsStateWithLifecycle()
+    var scanSource by rememberSaveable { mutableStateOf(false) }
+    var cameraName by rememberSaveable { mutableStateOf<String?>(null) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var editor by remember { mutableStateOf<Editor?>(null) }
     var deleting by remember { mutableStateOf<Any?>(null) }
@@ -58,6 +64,14 @@ data class Editor(val kind: String, val value: Any? = null)
         if (uri != null && b != null) vm.attach(b, uri)
         attachmentBill = null
     }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.scanReceipt(uri) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        cameraName?.let { name ->
+            val file = File(context.filesDir, "receipts/$name")
+            if (success) vm.scanReceipt(FileProvider.getUriForFile(context, "${context.packageName}.files", file), name) else file.delete()
+        }
+        cameraName = null
+    }
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> if (uri != null) vm.export(uri) }
     LaunchedEffect(vm) { vm.messages.receiveAsFlow().collect { snackbar.showSnackbar(it) } }
     val labels = listOf("Inicio", "Boletas", "Movimientos", "Estadísticas", "Configuración")
@@ -67,7 +81,7 @@ data class Editor(val kind: String, val value: Any? = null)
         bottomBar = { NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
             labels.forEachIndexed { i, label -> NavigationBarItem(selected = i == tab, onClick = { tab = i }, icon = { Icon(icons[i], label) }, label = { Text(label, fontSize = 10.sp, maxLines = 1) }) }
         } },
-        floatingActionButton = { if (tab in 1..2 && !busy) FloatingActionButton(onClick = { editor = Editor(if (tab == 1) "bill" else "expense") }, containerColor = Mint) { Icon(Icons.Outlined.Add, "Agregar") } }
+        floatingActionButton = { if (tab in 1..2 && !busy && !scanBusy && scanDraft == null) FloatingActionButton(onClick = { editor = Editor(if (tab == 1) "bill" else "expense") }, containerColor = Mint) { Icon(Icons.Outlined.Add, "Agregar") } }
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
@@ -84,6 +98,7 @@ data class Editor(val kind: String, val value: Any? = null)
             if (busy || state.records.settings == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Preparando registros mensuales…") }
             else {
                 if (state.missingRate) item { Notice("Falta la cotización del dólar. Los ingresos en USD todavía no están incluidos en los totales en pesos.") { editor = Editor("settings", state.settings) } }
+                if (scanBusy) item { SurfaceCard { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Leyendo ticket en este teléfono…"); Text("La compra se mostrará para revisar antes de guardarse.") } }
                 when (tab) {
                     0 -> {
                         item { Hero(state) }
@@ -99,6 +114,8 @@ data class Editor(val kind: String, val value: Any? = null)
                             OutlinedButton(onClick = { editor = Editor("income") }, modifier = Modifier.weight(1f)) { Text("+ Ingreso") }
                             OutlinedButton(onClick = { editor = Editor("expense") }, modifier = Modifier.weight(1f)) { Text("+ Gasto") }
                         } }
+                        item { FoodSummaryCard(state) }
+                        item { OutlinedButton(onClick = { scanSource = true }, enabled = !scanBusy && scanDraft == null, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.DocumentScanner, null); Spacer(Modifier.width(8.dp)); Text("Escanear ticket") } }
                         item { Section("Próximos vencimientos") }
                         val upcoming = state.bills.filter { it.paidDate == null && it.dueDate != null }.sortedBy { it.dueDate }
                         if (upcoming.isEmpty()) item { Empty("No hay vencimientos cargados", "Agregá la fecha real desde cada boleta.") }
@@ -128,14 +145,20 @@ data class Editor(val kind: String, val value: Any? = null)
                         } }
                     }
                     2 -> {
+                        item { FoodSummaryCard(state) }
+                        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { editor = Editor("expense") }, modifier = Modifier.weight(1f)) { Text("+ Compra / gasto") }
+                            OutlinedButton(onClick = { scanSource = true }, enabled = !scanBusy && scanDraft == null, modifier = Modifier.weight(1f)) { Text("Escanear ticket") }
+                        } }
                         item { Section("Ingresos"); Spacer(Modifier.height(8.dp)); Button(onClick = { editor = Editor("income") }) { Text("Agregar ingreso") } }
                         if (state.incomes.isEmpty()) item { Empty("Sin ingresos", "Registrá un ingreso en ARS o USD.") }
                         state.incomes.forEach { i -> item(key = i.id) { RecordCard(i.name, if (i.currency == "USD") "USD ${decimal(i.cents)} · ${if (state.settings.rateCents > 0) ars(toArs(i.cents, i.currency, state.settings.rateCents)) else "Sin cotización"}" else "Pesos argentinos", if (i.currency == "USD") "USD ${decimal(i.cents)}" else ars(i.cents), Mint, { editor = Editor("income", i) }, { deleting = i }) } }
                         item { Section("Gastos personales", ars(state.expenses.sumOf { it.cents })) }
                         if (state.expenses.isEmpty()) item { Empty("Sin gastos personales", "Supermercado, transporte, mascotas y más.") }
-                        state.expenses.forEach { e -> item(key = e.id) { RecordCard(e.description.ifBlank { e.category }, "${e.category} · ${e.date}", ars(e.cents), Peach, { editor = Editor("expense", e) }, { deleting = e }) } }
+                        state.expenses.forEach { e -> item(key = e.id) { PurchaseCard(e, { editor = Editor("expense", e) }, { deleting = e }) } }
                     }
                     3 -> {
+                        item { FoodSummaryCard(state) }
                         item { Distribution(state) }
                         item { Metric("Saldo actual del mes", ars(state.totals.balance), Modifier.fillMaxWidth(), Mint) }
                         item { Text("Saldo = ingresos − gastos reales. Hay ${state.bills.count { it.paidDate == null }} boletas sin pagar. El saldo no representa ahorro definitivo.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -164,18 +187,40 @@ data class Editor(val kind: String, val value: Any? = null)
                         state.records.recurring.filter { it.active }.forEach { r -> item(key = r.id) { RecordCard(r.name, "Cada ${r.frequency} mes(es) · desde ${r.startMonth}${if (r.estimated) " · Estimado" else ""}", ars(r.cents), Lavender, { editor = Editor("recurring", r) }, { deleting = r }) } }
                         item { SurfaceCard {
                             Text("Tus datos se quedan con vos", style = MaterialTheme.typography.titleLarge)
-                            Text("Room guarda la información en este dispositivo. No hay cuentas, servidores ni conexión requerida.")
+                            Text("Tus finanzas y los tickets se guardan en este dispositivo. No hay cuentas, servidores ni conexión requerida.")
                             Button(onClick = { exporter.launch("mi-departamento-${LocalDate.now()}.json") }) { Icon(Icons.Outlined.FileDownload, null); Spacer(Modifier.width(8.dp)); Text("Exportar copia de seguridad") }
                             Text("JSON con todos los meses, movimientos, historial y comprobantes. Guardalo en un lugar privado. La importación desde la app se agregará en una próxima versión.", style = MaterialTheme.typography.bodySmall)
                         } }
-                        item { Text("Mi Departamento · versión 0.1.0\nHecho para llevar tus cuentas con calma.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
+                        item { Text("Mi Departamento · versión 0.2.0\nHecho para llevar tus cuentas con calma.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
         }
     }
     if (monthDialog) MonthDialog(state.month, { monthDialog = false }) { vm.selectMonth(it); monthDialog = false }
-    editor?.let { e -> EditDialog(e, state, onDismiss = { editor = null }, onSave = { value ->
+    if (editor == null) scanDraft?.let { draft -> key(draft.expense.id) {
+        PurchaseDialog(draft.expense, state.month, draft.text, savingPurchase, purchaseError, { vm.discardScan() }, { vm.expense(it) })
+    } }
+    if (scanSource) AlertDialog(onDismissRequest = { scanSource = false }, title = { Text("Escanear ticket") }, text = { Text("Sacá una foto nítida del ticket completo o elegí una de la galería. La lectura funciona sin internet y te mostrará los datos antes de guardarlos.") }, confirmButton = {
+        TextButton(onClick = {
+            scanSource = false
+            runCatching {
+                val dir = File(context.filesDir, "receipts").apply { mkdirs() }
+                val name = "camera-${newId()}.jpg"
+                val file = File(dir, name).apply { createNewFile() }
+                cameraName = name
+                camera.launch(FileProvider.getUriForFile(context, "${context.packageName}.files", file))
+            }.onFailure { cameraName?.let { File(context.filesDir, "receipts/$it").delete() }; cameraName = null; vm.messages.trySend("No se pudo abrir la cámara. Probá elegir una foto de la galería.") }
+        }) { Text("Sacar foto") }
+    }, dismissButton = { Column {
+        TextButton(onClick = { scanSource = false; gallery.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }) { Text("Elegir de galería") }
+        TextButton(onClick = { scanSource = false }) { Text("Cancelar") }
+    } })
+    editor?.let { e -> if (e.kind == "expense") {
+        key((e.value as? Expense)?.id ?: "new-purchase") {
+            PurchaseDialog(e.value as? Expense, state.month, saving = savingPurchase, serverError = purchaseError, onDismiss = { editor = null; vm.clearPurchaseError() }, onSave = { vm.expense(it) { editor = null } })
+        }
+    } else EditDialog(e, state, onDismiss = { editor = null }, onSave = { value ->
         when(value) { is Bill -> vm.bill(value); is Income -> vm.income(value); is Expense -> vm.expense(value); is Settings -> vm.settings(value); is Recurring -> vm.recurring(value, e.value == null) }
         editor = null
     }) }

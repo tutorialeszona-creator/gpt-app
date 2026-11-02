@@ -65,7 +65,7 @@ class RepositoryTest {
         val backupFile = File(context.cacheDir, "backup.json")
         repo.export(Uri.fromFile(backupFile))
         val backup = JSONObject(backupFile.readText())
-        assertEquals(1, backup.getInt("version"))
+        assertEquals(2, backup.getInt("version"))
         assertEquals(19, backup.getJSONArray("bills").length())
         assertEquals("JVBERi10ZXN0", backup.getJSONObject("attachments").getString("test.pdf"))
         assertEquals(2, backup.getJSONArray("paymentEvents").length())

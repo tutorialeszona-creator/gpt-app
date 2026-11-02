@@ -21,7 +21,11 @@ data class Bill(
 @Entity(tableName = "incomes")
 data class Income(@PrimaryKey val id: String, val month: String, val name: String, val cents: Long, val currency: String)
 @Entity(tableName = "expenses")
-data class Expense(@PrimaryKey val id: String, val date: String, val category: String, val description: String, val cents: Long)
+data class Expense(@PrimaryKey val id: String, val date: String, val category: String, val description: String, val cents: Long,
+    @ColumnInfo(defaultValue = "''") val merchant: String = "",
+    @ColumnInfo(defaultValue = "'[]'") val items: List<ar.com.midepartamento.domain.PurchaseItem> = emptyList(),
+    @ColumnInfo(defaultValue = "NULL") val receipt: String? = null
+)
 @Entity(tableName = "months")
 data class GeneratedMonth(@PrimaryKey val month: String)
 @Entity(tableName = "settings")
@@ -57,7 +61,8 @@ interface FinanceDao {
     @Query("DELETE FROM expenses WHERE id=:id") suspend fun deleteExpense(id: String)
     @Query("DELETE FROM payment_events WHERE billId=:id") suspend fun deleteEvents(id: String)
 }
-@Database(entities = [Recurring::class, Bill::class, Income::class, Expense::class, GeneratedMonth::class, Settings::class, PaymentEvent::class], version = 1, exportSchema = true)
+@TypeConverters(PurchaseConverters::class)
+@Database(entities = [Recurring::class, Bill::class, Income::class, Expense::class, GeneratedMonth::class, Settings::class, PaymentEvent::class], version = 2, exportSchema = true)
 abstract class FinanceDatabase : RoomDatabase() {
     abstract fun dao(): FinanceDao
     companion object {

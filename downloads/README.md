@@ -1,13 +1,13 @@
-# Descargar Mi Departamento v0.1
+# Descargar Mi Departamento v0.2
 
-[Descargar APK para Android](https://github.com/tutorialeszona-creator/gpt-app/raw/refs/heads/main/downloads/Mi-Departamento-v0.1.apk)
+**[Descargar APK v0.2 para Android](https://github.com/tutorialeszona-creator/gpt-app/raw/refs/heads/main/downloads/Mi-Departamento-v0.2.apk)** — aproximadamente 61 MB, Android 8.0 o posterior.
 
-Aplicación de prueba para Android 8.0 o posterior, aproximadamente 16 MB. Abrí el enlace desde el teléfono y luego abrí el archivo descargado para instalarlo. Si Android lo solicita, habilitá la instalación para el navegador o el administrador de archivos que estés usando.
+Abrí el enlace desde el teléfono y después abrí el archivo descargado. Si Android lo solicita, habilitá la instalación para el navegador o administrador de archivos que estés usando. Si el enlace directo no abre, seleccioná `Mi-Departamento-v0.2.apk` en esta carpeta y tocá **Download raw file**. Si GitHub pide iniciar sesión, usá una cuenta con acceso al repositorio.
 
-Si el enlace directo no abre, seleccioná `Mi-Departamento-v0.1.apk` en esta carpeta y tocá **Download raw file** (icono de descarga). Si GitHub te pide iniciar sesión, usá la cuenta con acceso a este repositorio.
+Instalá esta versión encima de la anterior, sin desinstalar: tiene la misma firma, un número de versión mayor y una migración de datos probada. Desinstalar borra la base local.
 
-En el primer uso, ingresá la cotización del dólar en **Configuración**. Los datos permanecen en el teléfono. La exportación JSON está disponible; la restauración desde la interfaz todavía está pendiente.
+Novedades: compras con productos, supermercado/verdulería/carnicería, subtotales y total de comida del mes, escaneo con cámara o galería y revisión antes de guardar. El modelo OCR viene incluido para funcionar sin internet. La lectura de tickets reales todavía necesita pruebas en un teléfono.
 
-APK firmado para desarrollo. Compilación y 10 pruebas automatizadas aprobadas; todavía falta comprobarlo en un teléfono real. No desinstales una instalación con datos sin exportarlos antes: desinstalar borra la base local.
+La exportación JSON incluye compras, productos y fotos. La restauración desde la interfaz sigue pendiente. El archivo `.sha256` verifica la integridad de la descarga.
 
-El archivo `.sha256` permite verificar la integridad de esta descarga. El código y las instrucciones de compilación están en la raíz del repositorio.
+La versión 0.1 se conserva como archivo histórico; para actualizar descargá la 0.2. El código y las instrucciones de compilación están en la raíz del repositorio.
